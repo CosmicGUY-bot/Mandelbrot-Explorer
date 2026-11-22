@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandelbrot Explorer</title>
+<style>
+:root{--bg:#f4f1ea;--fg:#1d1b2e;--ac:#5b3fd1;--card:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14121f;--fg:#ece8ff;--ac:#9d86ff;--card:#1f1c30}}
+:root[data-theme="dark"]{--bg:#14121f;--fg:#ece8ff;--ac:#9d86ff;--card:#1f1c30}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px 12px;background:var(--bg);color:var(--fg);font-family:Georgia,"Times New Roman",serif}
+h1{margin:0;font-size:clamp(26px,6vw,40px);font-weight:600;letter-spacing:-.01em}
+p{margin:0;max-width:52ch;text-align:center;line-height:1.5;opacity:.85}
+canvas{width:100%;max-width:600px;aspect-ratio:1;border-radius:12px;cursor:crosshair;background:#000;touch-action:manipulation}
+.bar{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center;background:var(--card);padding:12px 16px;border-radius:12px}
+button,select{font:inherit;font-size:15px;padding:8px 16px;border-radius:8px;border:1px solid var(--ac);background:transparent;color:var(--fg);cursor:pointer}
+button{background:var(--ac);color:var(--bg);font-weight:700}
+label{display:flex;gap:8px;align-items:center;font-size:15px}
+#info{font-family:ui-monospace,Menlo,monospace;font-size:13px;opacity:.8;text-align:center}
+</style></head><body>
+<h1>Mandelbrot Explorer</h1>
+<p>Click or tap the picture to zoom in. The set is every point c where z → z² + c stays bounded.</p>
+<canvas id="c" width="600" height="600"></canvas>
+<div class="bar">
+ <button id="out">Zoom out</button>
+ <button id="reset">Reset</button>
+ <label>Detail <input id="it" type="range" min="50" max="800" step="10" value="150"></label>
+ <label>Colors <select id="pal"><option value="0">Violet</option><option value="1">Fire</option><option value="2">Ocean</option></select></label>
+</div>
+<div id="info"></div>
+<script>
+const cv=document.getElementById('c'),g=cv.getContext('2d'),S=cv.width,info=document.getElementById('info');
+const P=[[0,.1,.25],[0,.05,.1],[.5,.6,.7]];
+let cx,cy,sc,it,pal,busy=false;
+function reset(){cx=-.5;cy=0;sc=3.2}
+function render(){
+ it=+document.getElementById('it').value;pal=P[+document.getElementById('pal').value];
+ const img=g.createImageData(S,S),d=img.data;
+ for(let py=0;py<S;py++){const ci=cy+(py/S-.5)*sc;
+  for(let px=0;px<S;px++){const cr=cx+(px/S-.5)*sc;
+   let zr=0,zi=0,n=0,r2=0;
+   while(n<it&&(r2=zr*zr+zi*zi)<65536){const t=zr*zr-zi*zi+cr;zi=2*zr*zi+ci;zr=t;n++}
+   const o=(py*S+px)*4;
+   if(n===it){d[o]=d[o+1]=d[o+2]=0}
+   else{const nu=n+1-Math.log2(Math.log(r2)/2),t=nu*.05;
+    d[o]=255*(.5+.5*Math.cos(6.283*(t+pal[0])));
+    d[o+1]=255*(.5+.5*Math.cos(6.283*(t+pal[1])));
+    d[o+2]=255*(.5+.5*Math.cos(6.283*(t+pal[2])))}
+   d[o+3]=255}}
+ g.putImageData(img,0,0);
+ info.textContent='zoom ×'+(3.2/sc).toExponential(1)+'   center '+cx.toFixed(8)+' + '+cy.toFixed(8)+'i'}
+function zoomAt(fx,fy,k){cx+=(fx-.5)*sc;cy+=(fy-.5)*sc;sc*=k;render()}
+cv.addEventListener('click',e=>{const r=cv.getBoundingClientRect();zoomAt((e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height,.4)});
+cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect();zoomAt((e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height,e.deltaY<0?.6:1.6)},{passive:false});
+document.getElementById('out').onclick=()=>{sc*=2.5;render()};
+document.getElementById('reset').onclick=()=>{reset();render()};
+document.getElementById('it').onchange=render;
+document.getElementById('pal').onchange=render;
+reset();render();
+</script></body></html>
